@@ -1,0 +1,13 @@
+# webserver
+fastapi
+uvicorn[standard]
+sqlalchemy # ORM
+psycopg2-binary # PostgreSQL driver 
+python-jose[cryptography] # JWT encode/decode
+bcrypt # password hashing
+python-dotenv # load .env
+pydantic[email] # data validation
+
+# ai tool
+langchain-openai
+langchain-ollama
