@@ -109,7 +109,6 @@ def validate_and_sanitize(sql: str, requires_rls: bool = False) -> ValidationRes
                     ),
                     is_unauthorized=True,
                 )
-
     # 8. LIMIT 자동 주입
     sanitized_sql = _inject_limit_if_needed(sql)
 

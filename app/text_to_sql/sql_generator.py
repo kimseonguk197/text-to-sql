@@ -1,16 +1,4 @@
-"""
-SQL 생성 (SQL Generation) : 자연어를 SQL로 변환하는 단계
-
-<프롬프트 엔지니어링 전략>
-  1. System Role     : "PostgreSQL 전문가" 역할 부여
-  2. 스키마 주입      : DB 구조를 컨텍스트로 제공
-  3. 규칙 명시        : 반드시 지켜야 할 제약 조건
-  4. Few-shot 예시   : 좋은 SQL 예시 3개 제공 → 정확도 대폭 향상
-  5. 출력 형식 지정   : SQL만 출력 (불필요한 설명 제거)
-  6. 창의성이 아닌 정확성을 위해 temperature=0
-
-"""
-
+# SQL 생성
 import os
 import re
 import logging
@@ -19,7 +7,11 @@ from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 
-from app.text_to_sql.schema_context import get_schema_context
+from app.text_to_sql.schema_context import (
+    get_schema_context_dynamic,
+    TABLE_DESCRIPTIONS,
+    ALLOWED_TABLES,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +23,20 @@ llm_sql = ChatOpenAI(
     temperature=0,          # SQL은 창의성 불필요 → 0 고정
     max_tokens=1000,        # SQL이 지나치게 길어지는 것을 방지
 )
+
+
+# 테이블 설명만 넘겨 LLM이 핵심 테이블 하나를 선택하게 하는 프롬프트
+# FK 의존 테이블은 get_schema_context_dynamic이 자동 확장하므로
+# LLM은 질문이 직접 조회하는 테이블 하나만 반환하면 됩니다.
+TABLE_SELECTION_PROMPT = ChatPromptTemplate.from_messages([
+    (
+        "system",
+        "아래 테이블 목록에서 사용자 질문이 직접 조회하는 테이블 하나만 출력하세요.\n\n"
+        "[테이블 목록]\n{table_descriptions}\n\n"
+        "테이블명만 출력하세요. 예: orders",
+    ),
+    ("user", "{user_message}"),
+])
 
 
 #  Few-shot 예시 (SQL 생성 정확도를 높이는 핵심 기법)
@@ -90,27 +96,23 @@ WHERE o.member_id = :current_member_id
   AND p.category = '전자제품';
 """
 
-# ─────────────────────────────────────────────────────────────
-#  SQL 생성 프롬프트 템플릿
-# ─────────────────────────────────────────────────────────────
-SQL_GENERATION_PROMPT = ChatPromptTemplate.from_messages([
-    (
-        "system",
-"""사용자의 자연어 질문을 PostgreSQL SELECT 문으로 변환하세요.
-
-## 데이터베이스 스키마
-{schema}
-
+_SQL_RULES = """\
 ## 반드시 지켜야 할 규칙
 1. SELECT 문만 생성하세요.
 2. 개인 데이터(orders, chats) 조회 시 WHERE member_id = :current_member_id 포함.
 3. 집계 쿼리가 아닌 경우 LIMIT 100 포함.
 4. SQL 코드만 출력하세요. 설명이나 마크다운 블록 없이.
+5. 모든 테이블 조회 시 del_yn = 'N' 조건을 반드시 포함하세요."""
 
-## 참고 예시
-{examples}
-
-이제 아래 질문에 대한 SQL을 생성하세요.""",
+#  SQL 생성 프롬프트 템플릿
+SQL_GENERATION_PROMPT = ChatPromptTemplate.from_messages([
+    (
+        "system",
+        "사용자의 자연어 질문을 PostgreSQL SELECT 문으로 변환하세요.\n\n"
+        "## 데이터베이스 스키마\n{schema}\n\n"
+        + _SQL_RULES + "\n\n"
+        "## 참고 예시\n{examples}\n\n"
+        "이제 아래 질문에 대한 SQL을 생성하세요.",
     ),
     ("user", "{user_message}"),
 ])
@@ -119,24 +121,12 @@ SQL_GENERATION_PROMPT = ChatPromptTemplate.from_messages([
 SQL_FIX_PROMPT = ChatPromptTemplate.from_messages([
     (
         "system",
-        """아래 SQL 쿼리를 실행했을 때 오류가 발생했습니다. 오류를 분석하고 올바른 SQL로 수정하세요.
-
-## 데이터베이스 스키마
-{schema}
-
-## 반드시 지켜야 할 규칙
-1. SELECT 문만 생성하세요.
-2. 개인 데이터(orders, chats) 조회 시 WHERE member_id = :current_member_id 포함.
-3. 집계 쿼리가 아닌 경우 LIMIT 100 포함.
-4. SQL 코드만 출력하세요. 설명이나 마크다운 블록 없이.
-
-## 원본 SQL
-{original_sql}
-
-## 발생한 오류 메시지
-{error_message}
-
-위 오류를 수정한 올바른 SQL을 출력하세요.""",
+        "아래 SQL 쿼리를 실행했을 때 오류가 발생했습니다. 오류를 분석하고 올바른 SQL로 수정하세요.\n\n"
+        "## 데이터베이스 스키마\n{schema}\n\n"
+        + _SQL_RULES + "\n\n"
+        "## 원본 SQL\n{original_sql}\n\n"
+        "## 발생한 오류 메시지\n{error_message}\n\n"
+        "위 오류를 수정한 올바른 SQL을 출력하세요.",
     ),
     ("user", "수정된 SQL을 생성해주세요."),
 ])
@@ -144,7 +134,9 @@ SQL_FIX_PROMPT = ChatPromptTemplate.from_messages([
 
 # 자연어 질문을 PostgreSQL SELECT 문으로 변환
 def generate_sql(user_message: str) -> str:
-    schema = get_schema_context()
+    # schema = get_schema_context()
+    relevant_tables = _select_relevant_tables(user_message)
+    schema = get_schema_context_dynamic(relevant_tables)
     chain = SQL_GENERATION_PROMPT | llm_sql | StrOutputParser()
     raw_sql = chain.invoke({
         "schema": schema,
@@ -158,9 +150,24 @@ def generate_sql(user_message: str) -> str:
     logger.debug(f"[SQL 생성] 입력: {user_message[:50]}... → SQL: {cleaned_sql[:100]}...")
     return cleaned_sql
 
+# 사용자 질문에서 핵심 테이블 하나를 LLM으로 선택
+def _select_relevant_tables(user_message: str) -> list[str]:
+    desc_text = "\n".join(
+        f"- {name}: {desc}" for name, desc in TABLE_DESCRIPTIONS.items()
+    )
+    chain = TABLE_SELECTION_PROMPT | llm_sql | StrOutputParser()
+    result = chain.invoke({"table_descriptions": desc_text, "user_message": user_message})
+    table = result.strip().lower()
+    selected = [table] if table in ALLOWED_TABLES else []
+    logger.debug(f"[테이블 선택] 질문: {user_message[:40]}... → {selected}")
+    return selected
+
+
 # 실행 실패한 SQL을 LLM을 통해 자가 교정(Self-Correction)
 def fix_sql(original_sql: str, error_message: str) -> str:
-    schema = get_schema_context()
+    # schema = get_schema_context()
+    relevant_tables = _tables_from_sql(original_sql)
+    schema = get_schema_context_dynamic(relevant_tables)
     chain = SQL_FIX_PROMPT | llm_sql | StrOutputParser()
     fixed_sql = chain.invoke({
         "schema": schema,
@@ -178,3 +185,11 @@ def _strip_markdown_code_block(text: str) -> str:
     text = re.sub(r"```(?:sql)?\s*\n?", "", text, flags=re.IGNORECASE)
     text = text.replace("```", "")
     return text.strip()
+
+# 이미 한번 만들어졌던 SQL에서 테이블명을 추출
+def _tables_from_sql(sql: str) -> list[str]:
+    import re
+    pattern = re.compile(r'\b(?:FROM|JOIN)\s+([a-zA-Z_][a-zA-Z0-9_]*)', re.IGNORECASE)
+    found = {t.lower() for t in pattern.findall(sql)}
+    return list(found & ALLOWED_TABLES)
+

@@ -39,4 +39,7 @@ def my_orders(
     db: Session = Depends(get_db),
     current_member: models.Member = Depends(get_current_member),
 ):
-    return db.query(models.Order).filter(models.Order.member_id == current_member.id).all()
+    return db.query(models.Order).filter(
+        models.Order.member_id == current_member.id,
+        models.Order.del_yn == 'N',
+    ).all()

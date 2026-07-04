@@ -24,7 +24,7 @@ from langchain_core.output_parsers import StrOutputParser
 
 from app.text_to_sql.sql_generator import generate_sql, fix_sql
 from app.text_to_sql.sql_validator import validate_and_sanitize
-from app.text_to_sql.sql_executor import execute_sql, SQLExecutionError
+from app.text_to_sql.sql_executor import execute_sql
 from app.text_to_sql.llm_response import (
     format_sql_result,
     format_general_response,
@@ -194,7 +194,7 @@ def _run_text_to_sql(
                 intent="QUERY",
             )
 
-        except SQLExecutionError as e:
+        except Exception as e:
             # SQL 실행 실패 → 오류 메시지를 다음 재시도에 전달
             last_error = str(e)
             logger.warning(

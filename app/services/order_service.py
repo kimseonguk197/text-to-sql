@@ -28,9 +28,12 @@ def place_order(db: Session, member_id: int, product_id: int, quantity: int):
 
 
 def cancel_order(db: Session, member_id: int, order_id: int):
-    order = db.query(models.Order).filter(models.Order.id == order_id).first()
+    order = db.query(models.Order).filter(
+        models.Order.id == order_id,
+        models.Order.del_yn == 'N',
+    ).first()
     if not order:
-        raise ValueError(f"주문 ID {order_id}를 찾을 수 없습니다.")
+        raise ValueError(f"주문 ID {order_id}를 찾을 수 없거나 이미 취소된 주문입니다.")
     if order.member_id != member_id:
         raise ValueError("본인의 주문만 취소할 수 있습니다.")
 
@@ -40,7 +43,7 @@ def cancel_order(db: Session, member_id: int, order_id: int):
         product.stock += order.quantity
 
     quantity = order.quantity
-    db.delete(order)
+    order.del_yn = 'Y'
     db.commit()
 
     logger.info(f"[cancel_order] 완료 | 회원={member_id}, 주문={order_id}")

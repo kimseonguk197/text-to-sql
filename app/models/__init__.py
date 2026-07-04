@@ -12,6 +12,7 @@ class Member(Base):
     password = Column(String, nullable=False)
     name = Column(String, nullable=True)
     age = Column(Integer, nullable=True)
+    del_yn = Column(String(1), nullable=False, default='N')
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     products = relationship("Product", back_populates="registrant")
@@ -28,6 +29,7 @@ class Product(Base):
     price = Column(Float, nullable=False)
     stock = Column(Integer, nullable=False, default=0)
     member_id = Column(Integer, ForeignKey("members.id"), nullable=False)
+    del_yn = Column(String(1), nullable=False, default='N')
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     registrant = relationship("Member", back_populates="products")
@@ -41,6 +43,7 @@ class Order(Base):
     member_id = Column(Integer, ForeignKey("members.id"), nullable=False)
     product_id = Column(Integer, ForeignKey("products.id"), nullable=False)
     quantity = Column(Integer, nullable=False)
+    del_yn = Column(String(1), nullable=False, default='N')
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     member = relationship("Member", back_populates="orders")
@@ -54,6 +57,7 @@ class Chat(Base):
     member_id = Column(Integer, ForeignKey("members.id"), nullable=False)
     request = Column(String, nullable=False)
     response = Column(String, nullable=False)
+    del_yn = Column(String(1), nullable=False, default='N')
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     member = relationship("Member", back_populates="chats")
 
