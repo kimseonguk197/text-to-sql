@@ -55,7 +55,7 @@ app/
 │   ├── sql_generator.py        # SQL 생성 (LLM + Few-shot)
 │   ├── sql_validator.py        # SQL 검증 & 보안
 │   ├── sql_executor.py         # SQL 실행
-│   ├── response_formatter.py   # 결과 → 자연어
+│   ├── llm_response.py   # 결과 → 자연어
 │   └── service.py              # 전체 파이프라인 오케스트레이션
 ```
 
@@ -97,8 +97,7 @@ SQL 실행 — 파라미터 바인딩 (SQL Injection 방지)
 - 방식2. 자연어 방식. 테이블을 자연어로 설명
 - 방식3. 하이브리드방식(우리예제). DDL + 자연어 설명 혼합으로서, 가장 높은 정확도.
 
-**프로덕션 팁:** 테이블이 수백 개라면 쿼리 의도에 따라 관련 테이블만 동적으로 선택하는 "동적 스키마 선택(Dynamic Schema Selection)" 기법을 도입
-
+**프로덕션 팁:** 테이블이 수백 개라면 쿼리 의도에 따라 관련 테이블만 선택하는 기법을 도입
 ---
 
 ### SQL 생성 (`sql_generator.py`)
@@ -141,7 +140,7 @@ SQL 실행 — 파라미터 바인딩 (SQL Injection 방지)
 -파라미터 바인딩 오류 -> Self-Correction 재시도
 -DB 연결, 타임아웃 -> 오류 응답 반환
 
-### 결과 포매팅 (`response_formatter.py`)
+### 결과 포매팅 (`llm_response.py`)
 - SQL 결과(테이블)를 사람이 읽기 쉬운 **자연어**로 변환
 - LLM 포매팅시 temperature=0.3
 - 결과가 LLM 컨텍스트 창을 초과하면 상위 50건만 전달

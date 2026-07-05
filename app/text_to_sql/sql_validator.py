@@ -1,5 +1,4 @@
 #SQL 검증 & 보안 (SQL Validation)
-
 import re
 import logging
 from dataclasses import dataclass
@@ -94,8 +93,8 @@ def validate_and_sanitize(sql: str, requires_rls: bool = False) -> ValidationRes
             error_message="다중 SQL 문은 허용되지 않습니다.",
         )
 
-    # 7. Row-Level Security (RLS) 검사
-    #   개인 데이터 테이블(orders, chats)을 사용하는 쿼리에 반드시 :current_member_id 필터가 포함
+    # 7. Row-Level Security (RLS) 검사 -> 타인데이터 조회
+    #   개인 데이터 테이블(orders, chats)을 사용하는 쿼리에 반드시 :current_member_id 필터가 포함되어야함
     if requires_rls:
         personal_tables_in_sql = mentioned_tables & PERSONAL_TABLES
         if personal_tables_in_sql:

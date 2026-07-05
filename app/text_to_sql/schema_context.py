@@ -83,14 +83,13 @@ def _build_ddl_block(table: str) -> str:
 
 # 전체스키마 반환 함수
 def get_schema_context() -> str:
-    """전체 스키마 컨텍스트를 반환합니다. (동적 선택 실패 시 안전망 fallback)"""
     ddl_blocks = "\n\n".join(_build_ddl_block(t) for t in _TABLE_DDL)
     rel_section = "[테이블 관계]\n" + "\n".join(line for _, _, line in _RELATIONSHIPS)
     return ddl_blocks + "\n\n" + rel_section
 
-# 동적스키마 생성위한 함수 
+# 필터링된 스키마 조회 함수 
 # relevant_tables과 관계된(FK)테이블 포함하여 스키마 반환
-def get_schema_context_dynamic(relevant_tables: list[str]) -> str:
+def get_schema_context_by_tables(relevant_tables: list[str]) -> str:
     tables: set[str] = {t.lower().strip() for t in relevant_tables} & ALLOWED_TABLES
     if not tables:
         # 입력 테이블이 유효하지 않으면 전체 스키마를 반환

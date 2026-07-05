@@ -40,22 +40,23 @@ def _classify_category(user_message: str) -> str:
     ])
     chain = prompt | _llm_classify | StrOutputParser()
     result = chain.invoke({
+        # 카테고리 : order, product 등
         "category_descriptions": get_category_descriptions(),
         "user_message": user_message,
     })
     category = result.strip().lower()
     if category not in CATEGORIES:
-        logger.warning(f"[tool_caller] 알 수 없는 카테고리: '{category}' → 전체 fallback")
+        logger.warning(f"[tool_pipeline] 알 수 없는 카테고리: '{category}' → 전체 fallback")
         return None
-    logger.info(f"[tool_caller] 카테고리 분류: {category}")
+    logger.info(f"[tool_pipeline] 카테고리 분류: {category}")
     return category
 
 
-# 사용자 메시지로부터 적절한 tool을 선택하고 실행
-def call_tool(user_message: str, db: Session, member_id: int) -> str:
-    # 1단계: 카테고리 분류(주문, 상품 등)
+# 사용자 메시지로부터 적절한 tool(api)을 선택하고 실행
+def call_tool_pipeline(user_message: str, db: Session, member_id: int) -> str:
+    # 1.카테고리 분류(주문, 상품 등)
     category = _classify_category(user_message)
-    # 2단계: 특정 카테고리 스키마만 가져오기
+    # 2.특정 카테고리 스키마만 가져오기
     tools = get_schemas_by_category(category)
     llm_with_tools = _llm.bind_tools(tools)
 
@@ -71,17 +72,17 @@ def call_tool(user_message: str, db: Session, member_id: int) -> str:
 
     # LLM이 tool을 선택하지 않은 경우 (파라미터 부족 등)
     if not response.tool_calls:
-        logger.info("[tool_caller] tool 미선택 → LLM 직접 응답 반환")
+        logger.info("[tool_pipeline] tool 미선택 → LLM 직접 응답 반환")
         return response.content or "요청을 처리하려면 더 구체적인 정보가 필요합니다."
 
     tool_call = response.tool_calls[0]
     tool_name = tool_call["name"]
     args = tool_call["args"]
 
-    logger.info(f"[tool_caller] 실행 | tool={tool_name} | args={args}")
+    logger.info(f"[tool_pipeline] 실행 | tool={tool_name} | args={args}")
 
     try:
         return execute_tool(tool_name, args, db, member_id)
     except Exception as e:
-        logger.error(f"[tool_caller] 실행 실패 | tool={tool_name} | error={e}")
+        logger.error(f"[tool_pipeline] 실행 실패 | tool={tool_name} | error={e}")
         return f"요청 처리 중 오류가 발생했습니다: {str(e)}"

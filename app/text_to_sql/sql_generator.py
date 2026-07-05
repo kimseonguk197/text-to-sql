@@ -8,9 +8,10 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 
 from app.text_to_sql.schema_context import (
-    get_schema_context_dynamic,
+    get_schema_context_by_tables,
     TABLE_DESCRIPTIONS,
     ALLOWED_TABLES,
+    PERSONAL_TABLES,
 )
 
 logger = logging.getLogger(__name__)
@@ -26,7 +27,7 @@ llm_sql = ChatOpenAI(
 
 
 # 테이블 설명만 넘겨 LLM이 핵심 테이블 하나를 선택하게 하는 프롬프트
-# FK 의존 테이블은 get_schema_context_dynamic이 자동 확장하므로
+# FK 의존 테이블은 get_schema_context_by_tables이 자동 확장하므로
 # LLM은 질문이 직접 조회하는 테이블 하나만 반환하면 됩니다.
 TABLE_SELECTION_PROMPT = ChatPromptTemplate.from_messages([
     (
@@ -96,13 +97,14 @@ WHERE o.member_id = :current_member_id
   AND p.category = '전자제품';
 """
 
-_SQL_RULES = """\
-## 반드시 지켜야 할 규칙
-1. SELECT 문만 생성하세요.
-2. 개인 데이터(orders, chats) 조회 시 WHERE member_id = :current_member_id 포함.
-3. 집계 쿼리가 아닌 경우 LIMIT 100 포함.
-4. SQL 코드만 출력하세요. 설명이나 마크다운 블록 없이.
-5. 모든 테이블 조회 시 del_yn = 'N' 조건을 반드시 포함하세요."""
+_SQL_RULES = (
+    "## 반드시 지켜야 할 규칙\n"
+    "1. SELECT 문만 생성하세요.\n"
+    f"2. 개인 데이터({', '.join(sorted(PERSONAL_TABLES))}) 조회 시 WHERE member_id = :current_member_id 포함.\n"
+    "3. 집계 쿼리가 아닌 경우 LIMIT 100 포함.\n"
+    "4. SQL 코드만 출력하세요. 설명이나 마크다운 블록 없이.\n"
+    "5. 모든 테이블 조회 시 del_yn = 'N' 조건을 반드시 포함하세요."
+)
 
 #  SQL 생성 프롬프트 템플릿
 SQL_GENERATION_PROMPT = ChatPromptTemplate.from_messages([
@@ -136,7 +138,7 @@ SQL_FIX_PROMPT = ChatPromptTemplate.from_messages([
 def generate_sql(user_message: str) -> str:
     # schema = get_schema_context()
     relevant_tables = _select_relevant_tables(user_message)
-    schema = get_schema_context_dynamic(relevant_tables)
+    schema = get_schema_context_by_tables(relevant_tables)
     chain = SQL_GENERATION_PROMPT | llm_sql | StrOutputParser()
     raw_sql = chain.invoke({
         "schema": schema,
@@ -167,7 +169,7 @@ def _select_relevant_tables(user_message: str) -> list[str]:
 def fix_sql(original_sql: str, error_message: str) -> str:
     # schema = get_schema_context()
     relevant_tables = _tables_from_sql(original_sql)
-    schema = get_schema_context_dynamic(relevant_tables)
+    schema = get_schema_context_by_tables(relevant_tables)
     chain = SQL_FIX_PROMPT | llm_sql | StrOutputParser()
     fixed_sql = chain.invoke({
         "schema": schema,
