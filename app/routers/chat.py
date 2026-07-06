@@ -1,5 +1,4 @@
 
-
 import logging
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
@@ -28,6 +27,7 @@ def create_chat(
         f"메시지={body.message[:60]}..."
     )
 
+    # 매개변수 : 사용자질의문장, db세션, jwt토큰에서 추출한 사용자ID값 
     result = process_chat(
         user_message=body.message,
         db=db,
@@ -38,7 +38,7 @@ def create_chat(
     chat_record = models.Chat(
         member_id=current_member.id,
         request=body.message,
-        response=result.response,
+        response=result,
     )
     db.add(chat_record)
     db.commit()

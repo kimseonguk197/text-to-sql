@@ -3,18 +3,34 @@ from sqlalchemy.orm import Session
 
 from app.tools import order_tools, product_tools
 
+# 카테고리별 설명 (분류 프롬프트용) - 각 tool 모듈에 흩어져 있던 것을 이곳으로 통합
+CATEGORY_DESCRIPTIONS: dict = {
+    "order": "주문 생성, 주문 취소 등 주문관련",
+    "product": "상품 등록, 상품 정보 수정 등 상품관련",
+}
+
+# 카테고리 이름과 설명을 "name: description" 형태의 문자열로 반환 (분류 프롬프트용)
+def get_category_descriptions() -> str:
+    lines = []
+    for name, description in CATEGORY_DESCRIPTIONS.items():
+        # "order: 주문 생성, 주문 취소 등 주문관련" 의 형태로 append
+        lines.append(f"{name}: {description}")
+    return "\n".join(lines)
+
+
 #  카테고리 레지스트리 : dictionary에 파일자체를 매핑
 CATEGORIES: dict = {
     "order": order_tools,
     "product": product_tools,
 }
+# 특정 카테고리의 TOOL_SCHEMAS만 반환
+def get_schemas_by_category(category: str) -> list:
+    return CATEGORIES[category].TOOL_SCHEMAS
 
 # tool 이름 → 카테고리 모듈 매핑
-# 예시)
 # {
 #     "create_order":  order_tools,   
 #     "cancel_order":  order_tools,
-#     "update_product": product_tools,
 #     ...
 # }
 _TOOL_NAME_TO_MODULE = {}
@@ -24,28 +40,8 @@ for module in CATEGORIES.values():          # order_tools, product_tools
         _TOOL_NAME_TO_MODULE[name] = module # 이름 → 모듈 매핑
 
 
-# 카테고리 이름과 설명을 "name: description" 형태의 문자열로 반환 (분류 프롬프트용)
-def get_category_descriptions() -> str:
-    lines = []
-    for name, module in CATEGORIES.items():
-        # "order: 주문 생성, 주문 취소 등 주문관련" 의 형태로 append 
-        lines.append(f"{name}: {module.CATEGORY_DESCRIPTION}")
-    return "\n".join(lines)
-
-# 특정 카테고리의 TOOL_SCHEMAS만 반환
-def get_schemas_by_category(category: str) -> list:
-    module = CATEGORIES.get(category)
-    # 만약 알 수 없는 카테고리면 전체 반환 (fallback)
-    if not module:
-        schemas = []
-        for m in CATEGORIES.values():
-            schemas.extend(m.TOOL_SCHEMAS)
-        return schemas
-    return module.TOOL_SCHEMAS
-
 def execute_tool(tool_name: str, args: dict, db: Session, member_id: int) -> str:
-
-# tool 이름으로 해당 카테고리 executor를 찾아 실행
+    # tool 이름으로 해당 카테고리 executor를 찾아 실행
     module = _TOOL_NAME_TO_MODULE.get(tool_name)
     if not module:
         raise ValueError(f"[registry] 등록되지 않은 tool: '{tool_name}'")

@@ -2,7 +2,7 @@ import logging
 from sqlalchemy.orm import Session
 
 from app.text_to_sql.sql_generator import generate_sql, fix_sql
-from app.text_to_sql.sql_validator import validate_and_sanitize
+from app.text_to_sql.sql_validator import validate_and_correct
 from app.text_to_sql.sql_executor import execute_sql
 from app.text_to_sql.llm_response import format_sql_result, format_error_response
 
@@ -17,7 +17,7 @@ def call_sql_pipeline(
     current_sql = ""
     last_error = ""
     retry_count = 0
-    #  Self-Healing : 실패시 최대 반복 재시도 횟수
+    #  Self-Healing : 실패시 최대 반복 재시도 3회
     for attempt in range(3):
         # 1.SQL 생성 또는 수정 
         if attempt == 0:
@@ -33,7 +33,7 @@ def call_sql_pipeline(
             retry_count = attempt
 
         # 2.SQL 검증 
-        validation = validate_and_sanitize(current_sql, requires_rls=True)
+        validation = validate_and_correct(current_sql)
 
         if not validation.is_valid:
             # 검증 위반 중에서 타인 데이터 접근 시도는 Self-Correction 없이 즉시 차단
@@ -43,11 +43,11 @@ def call_sql_pipeline(
             last_error = str(validation)
             continue
 
+        # 3.SQL 실행
         try:
-            # 3.SQL 실행
             execution_params = {"current_member_id": current_member_id,}
-            sanitized_sql = validation.sanitized_sql
-            results = execute_sql(db, sanitized_sql, execution_params)
+            corrected_sql = validation.corrected_sql
+            results = execute_sql(db, corrected_sql, execution_params)
 
             logger.info(
                 f"[Text-to-SQL] 성공 | {len(results)}건 조회 | 재시도={retry_count}회"

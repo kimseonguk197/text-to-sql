@@ -3,7 +3,6 @@ import os
 import logging
 from sqlalchemy.orm import Session
 from langchain_openai import ChatOpenAI
-# from langchain_ollama import ChatOllama
 
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
@@ -56,7 +55,10 @@ def _classify_category(user_message: str) -> str:
 def call_tool_pipeline(user_message: str, db: Session, member_id: int) -> str:
     # 1.카테고리 분류(주문, 상품 등)
     category = _classify_category(user_message)
-    # 2.특정 카테고리 스키마만 가져오기
+    if category is None:
+        return "처리할 수 없는 요청입니다."
+
+    # 2.분류된 카테고리 스키마 가져오기
     tools = get_schemas_by_category(category)
     llm_with_tools = _llm.bind_tools(tools)
 

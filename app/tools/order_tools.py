@@ -7,8 +7,6 @@ from app.services import order_service
 
 logger = logging.getLogger(__name__)
 
-CATEGORY_DESCRIPTION = "주문 생성, 주문 취소 등 주문관련"
-
 #  Tool 스키마 (OpenAI function calling 형식)
 TOOL_SCHEMAS = [
     {

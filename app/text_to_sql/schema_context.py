@@ -12,7 +12,7 @@ ALLOWED_TABLES = frozenset({"members", "products", "orders", "chats"})
 #  RLS 대상 테이블 : jwt토큰의 member_id 필터가 자동 적용
 PERSONAL_TABLES = frozenset({"orders", "chats"})
 
-#  테이블 설명
+#  테이블 자연어 설명
 TABLE_DESCRIPTIONS: dict[str, str] = {
     "members":  "서비스를 이용하는 사용자 정보를 저장하는 회원 테이블",
     "products": "판매 중인 상품 목록 테이블",
@@ -20,8 +20,8 @@ TABLE_DESCRIPTIONS: dict[str, str] = {
     "chats":    "챗봇과의 대화 내용을 저장하는 채팅 이력 테이블",
 }
 
-#  테이블별 DDL (설명은 TABLE_DESCRIPTIONS 에서 별도 관리) 
-#  password 등 민감 컬럼은 스키마 제공에서 제외
+#  테이블별 DDL 
+#  민감 컬럼(password 등)은 스키마 제공에서 제외
 _TABLE_DDL: dict[str, str] = {
     "members": """\
 CREATE TABLE members (
@@ -72,11 +72,7 @@ _RELATIONSHIPS: list[tuple[str, str, str]] = [
 ]
 
 
-"""TABLE_DESCRIPTIONS + _TABLE_DDL 을 합쳐 단일 DDL 블록을 생성
-출력 예시)
-    -- [members] 서비스를 이용하는 사용자 정보를 저장하는 회원 테이블
-    CREATE TABLE members ( ... );
-"""
+# TABLE_DESCRIPTIONS + _TABLE_DDL 을 합쳐 단일 DDL 블록을 생성
 def _build_ddl_block(table: str) -> str:
     desc = TABLE_DESCRIPTIONS[table]
     return f"-- [{table}] {desc}\n{_TABLE_DDL[table]}"
@@ -88,11 +84,11 @@ def get_schema_context() -> str:
     return ddl_blocks + "\n\n" + rel_section
 
 # 필터링된 스키마 조회 함수 
-# relevant_tables과 관계된(FK)테이블 포함하여 스키마 반환
+# relevant_tables과 관계된(FK)테이블의 스키마 반환
 def get_schema_context_by_tables(relevant_tables: list[str]) -> str:
     tables: set[str] = {t.lower().strip() for t in relevant_tables} & ALLOWED_TABLES
     if not tables:
-        # 입력 테이블이 유효하지 않으면 전체 스키마를 반환
+        # 입력 테이블이 허용된 테이블에 없으면 전체 스키마를 반환
         return get_schema_context()
 
     # FK 부모 테이블 자동 포함 (예: orders → members, products 자동 추가)
@@ -101,7 +97,8 @@ def get_schema_context_by_tables(relevant_tables: list[str]) -> str:
             tables.add(parent)
 
     ddl_blocks = "\n\n".join(_build_ddl_block(t) for t in _TABLE_DDL if t in tables)
+    # 부모테이블, 자식테이블이 모두 대상일경우 그 관계도 설명을 포함
     rel_lines  = [desc for parent, child, desc in _RELATIONSHIPS if parent in tables and child in tables]
-    rel_block  = "[테이블 관계]\n" + "\n".join(rel_lines) if rel_lines else ""
+    rel_section  = "[테이블 관계]\n" + "\n".join(rel_lines) if rel_lines else ""
 
-    return (ddl_blocks + ("\n\n" + rel_block if rel_block else "")).strip()
+    return (ddl_blocks + ("\n\n" + rel_section if rel_section else "")).strip()

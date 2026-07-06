@@ -6,8 +6,6 @@ from app.services import product_service
 
 logger = logging.getLogger(__name__)
 
-CATEGORY_DESCRIPTION = "상품 등록, 상품 정보 수정 등 상품관련"
-
 #  Tool 스키마 (OpenAI function calling 형식)
 TOOL_SCHEMAS = [
     {

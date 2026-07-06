@@ -29,20 +29,20 @@ MAX_ROWS = 100
 
 @dataclass
 class ValidationResult:
-    is_valid: bool
-    sanitized_sql: Optional[str]   # 검증 통과 후 안전하게 수정된 SQL
-    error_message: Optional[str]   # 검증 실패 시 사유
-    is_unauthorized: bool = False  # 타인 데이터 접근 시도 여부
+    is_valid: bool # 유효성 판단
+    is_unauthorized: bool = False  # 유효성 중에 타인 데이터 접근 시도 여부
+    corrected_sql: Optional[str] = None   # 검증 통과 후 수정된 SQL
+    error_message: Optional[str] = None   # 검증 실패 시 사유
 
 
-def validate_and_sanitize(sql: str, requires_rls: bool = False) -> ValidationResult:
+def validate_and_correct(sql: str) -> ValidationResult:
     logger.info(f"[SQL 검증] 입력 쿼리:\n{sql}")
 
     # 1. 빈 SQL 체크
     if not sql or not sql.strip():
         return ValidationResult(
             is_valid=False,
-            sanitized_sql=None,
+            corrected_sql=None,
             error_message="SQL이 비어 있습니다.",
         )
 
@@ -52,23 +52,24 @@ def validate_and_sanitize(sql: str, requires_rls: bool = False) -> ValidationRes
     sql = _remove_sql_comments(sql).strip()
 
     #  3. SELECT 문 여부 확인 
-    first_token = sql.split()[0].upper() if sql.split() else ""
+    first_token = sql.split()[0].upper()
     if first_token != "SELECT":
         return ValidationResult(
             is_valid=False,
-            sanitized_sql=None,
+            corrected_sql=None,
             error_message=f"SELECT 문만 허용됩니다. (감지된 키워드: {first_token})",
         )
 
     # 4. 위험 키워드 블랙리스트 검사 
     sql_upper = sql.upper()
     for keyword in DANGEROUS_KEYWORDS:
+        # 특정 문자에 끼워져 있는것이 아닌, 독립된 하나의 단어로 쓰인 위험한 키워드 검출
         pattern = r'\b' + re.escape(keyword) + r'\b'
         if re.search(pattern, sql_upper):
             logger.warning(f"[SQL 검증] 위험 키워드 감지: {keyword}")
             return ValidationResult(
                 is_valid=False,
-                sanitized_sql=None,
+                corrected_sql=None,
                 error_message=f"허용되지 않는 SQL 키워드가 포함되어 있습니다: {keyword}",
             )
 
@@ -79,42 +80,43 @@ def validate_and_sanitize(sql: str, requires_rls: bool = False) -> ValidationRes
         logger.warning(f"[SQL 검증] 허용되지 않은 테이블: {unknown_tables}")
         return ValidationResult(
             is_valid=False,
-            sanitized_sql=None,
+            corrected_sql=None,
             error_message=f"허용되지 않은 테이블 접근: {', '.join(unknown_tables)}",
         )
 
     # 6. 다중 SQL 문 차단 (SQL Stacking 방지)
     #   SQL Stacking 공격 예시: SELECT * FROM members; DROP TABLE members;
-    sql_without_final_semicolon = sql.rstrip(";").strip()
+    sql_without_final_semicolon = sql.rstrip(";").strip() #문장 맨 오른쪽 끝에 있는 세미콜론(;)과 공백제거
+    # 그래도 쿼리에 ;이 남아있다면 다중 SQL문
     if ";" in sql_without_final_semicolon:
         return ValidationResult(
             is_valid=False,
-            sanitized_sql=None,
+            corrected_sql=None,
             error_message="다중 SQL 문은 허용되지 않습니다.",
         )
 
     # 7. Row-Level Security (RLS) 검사 -> 타인데이터 조회
-    #   개인 데이터 테이블(orders, chats)을 사용하는 쿼리에 반드시 :current_member_id 필터가 포함되어야함
-    if requires_rls:
-        personal_tables_in_sql = mentioned_tables & PERSONAL_TABLES
-        if personal_tables_in_sql:
-            if ":current_member_id" not in sql:
-                logger.warning(f"[SQL 검증] RLS 위반: {personal_tables_in_sql} 테이블에 current_member_id 필터 없음")
-                return ValidationResult(
-                    is_valid=False,
-                    sanitized_sql=None,
-                    error_message=(
-                        f"개인 데이터 테이블({', '.join(personal_tables_in_sql)})을 조회할 때는 ':current_member_id' 필터가 필요합니다."
-                    ),
-                    is_unauthorized=True,
-                )
+    #   개인 데이터 테이블(orders, chats)을 사용하는 쿼리에 반드시 :current_member_id 필터가 포함되어야함(_SQL_RULES 참고)
+    personal_tables_in_sql = mentioned_tables & PERSONAL_TABLES
+    if personal_tables_in_sql:
+        if ":current_member_id" not in sql:
+            logger.warning(f"[SQL 검증] RLS 위반: {personal_tables_in_sql} 테이블에 current_member_id 필터 없음")
+            return ValidationResult(
+                is_valid=False,
+                corrected_sql=None,
+                error_message=(
+                    f"개인 데이터 테이블({', '.join(personal_tables_in_sql)})을 조회할 때는 ':current_member_id' 필터가 필요합니다."
+                ),
+                is_unauthorized=True,
+            )
+        
     # 8. LIMIT 자동 주입
-    sanitized_sql = _inject_limit_if_needed(sql)
+    corrected_sql = _inject_limit_if_needed(sql)
 
-    logger.debug(f"[SQL 검증] 통과: {sanitized_sql[:80]}...")
+    logger.debug(f"[SQL 검증] 통과: {corrected_sql[:80]}...")
     return ValidationResult(
         is_valid=True,
-        sanitized_sql=sanitized_sql,
+        corrected_sql=corrected_sql,
         error_message=None,
     )
 
@@ -139,7 +141,7 @@ def _extract_table_names(sql: str) -> set[str]:
         re.IGNORECASE,
     )
     found = table_pattern.findall(sql_upper)
-    # 소문자로 통일
+    # 다시 소문자로 반환(테이블명은 일반적으로 소문자)
     return {t.lower() for t in found}
 
 

@@ -7,9 +7,6 @@ from sqlalchemy.exc import ( OperationalError, ProgrammingError,  DataError, Sta
 
 logger = logging.getLogger(__name__)
 
-# 실행 결과 최대 행 수 (validator의 LIMIT과 이중으로 방어)
-HARD_MAX_ROWS = 200
-
 
 def execute_sql(
     db: Session,
@@ -19,20 +16,16 @@ def execute_sql(
     logger.info(f"[SQL 실행] 쿼리: {sql}")
 
     try:
-        # params 딕셔너리로 파라미터 바인딩 
-        #   나쁜 예: db.execute(text(f"... WHERE id = {member_id}")) => 이 경우 member_id 변수에 "1 OR 1=1"같은 문자열 삽입 가능
-        #   좋은 예: db.execute(text("... WHERE id = :member_id"), {"member_id": member_id})
         result = db.execute(text(sql), params)
 
-        columns = list(result.keys()) #컬럼명 목록
-        rows = result.fetchmany(HARD_MAX_ROWS) #최대 HARD_MAX_ROWS 행만
+        columns = list(result.keys())
+        rows = result.fetchall()
 
+        # [{"컬럼명": 값, ...}, {...} ...] 형태로 변환
         result_list = [
             {col: _serialize_value(val) for col, val in zip(columns, row)}
             for row in rows
         ]
-
-        
         return result_list
 
     except ProgrammingError as e:
