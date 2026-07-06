@@ -50,19 +50,6 @@ TOOL_SCHEMAS = [
 ]
 
 
-def execute(tool_name: str, args: dict, db: Session, member_id: int) -> str:
-    """주문 카테고리 내 tool 이름으로 해당 함수 실행"""
-    handlers = {
-        "place_order": _place_order,
-        "cancel_order": _cancel_order,
-    }
-    handler = handlers.get(tool_name)
-    if not handler:
-        raise ValueError(f"[order_tools] 알 수 없는 tool: {tool_name}")
-    return handler(args, db, member_id)
-
-
-#  개별 tool 구현
 def _cancel_order(args: dict, db: Session, member_id: int) -> str:
     try:
         order_id, product_name, quantity = order_service.cancel_order(
@@ -94,3 +81,10 @@ def _place_order(args: dict, db: Session, member_id: int) -> str:
         f"- 수량: {order.quantity}개\n"
         f"- 총 금액: {product.price * order.quantity:,.0f}원"
     )
+
+
+# "tool 이름 : handler 함수" 매핑
+HANDLERS = {
+    "place_order": _place_order,
+    "cancel_order": _cancel_order,
+}

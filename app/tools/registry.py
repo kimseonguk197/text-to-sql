@@ -27,24 +27,22 @@ CATEGORIES: dict = {
 def get_schemas_by_category(category: str) -> list:
     return CATEGORIES[category].TOOL_SCHEMAS
 
-# tool 이름 → 카테고리 모듈 매핑
+
+# "tool 이름 : handler 함수" 매핑 (각 모듈의 HANDLERS를 모두 합함)
 # {
-#     "create_order":  order_tools,   
-#     "cancel_order":  order_tools,
+#     "place_order":  _place_order함수,
+#     "cancel_order": _cancel_order함수,
 #     ...
 # }
-_TOOL_NAME_TO_MODULE = {}
-for module in CATEGORIES.values():          # order_tools, product_tools
-    for tool in module.TOOL_SCHEMAS:        # 각 모듈의 tool 목록
-        name = tool["function"]["name"]     # "create_order", "cancel_order" ...
-        _TOOL_NAME_TO_MODULE[name] = module # 이름 → 모듈 매핑
+_TOOL_HANDLERS = {}
+for module in CATEGORIES.values():   # order_tools, product_tools
+    for name, handler in module.HANDLERS.items():
+        _TOOL_HANDLERS[name] = handler
 
 
 def execute_tool(tool_name: str, args: dict, db: Session, member_id: int) -> str:
-    # tool 이름으로 해당 카테고리 executor를 찾아 실행
-    module = _TOOL_NAME_TO_MODULE.get(tool_name)
-    if not module:
+    # tool 이름으로 handler 함수를 찾아 바로 실행
+    handler = _TOOL_HANDLERS.get(tool_name)
+    if not handler:
         raise ValueError(f"[registry] 등록되지 않은 tool: '{tool_name}'")
-    # module은 order_tools 또는 product_tools (모듈 자체)을 의미
-    # .execute은 그 모듈 안에 정의된 execute() 함수
-    return module.execute(tool_name, args, db, member_id)
+    return handler(args, db, member_id)

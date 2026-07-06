@@ -5,7 +5,6 @@ from app import models
 
 logger = logging.getLogger(__name__)
 
-
 def place_order(db: Session, member_id: int, product_id: int, quantity: int):
     product = db.query(models.Product).filter(models.Product.id == product_id).first()
     if not product:

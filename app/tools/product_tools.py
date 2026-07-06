@@ -73,18 +73,6 @@ TOOL_SCHEMAS = [
 ]
 
 
-def execute(tool_name: str, args: dict, db: Session, member_id: int) -> str:
-    """상품 카테고리 내 tool 이름으로 해당 함수 실행"""
-    handlers = {
-        "register_product": _register_product,
-        "update_product": _update_product,
-    }
-    handler = handlers.get(tool_name)
-    if not handler:
-        raise ValueError(f"[product_tools] 알 수 없는 tool: {tool_name}")
-    return handler(args, db, member_id)
-
-
 #  개별 tool 구현
 def _update_product(args: dict, db: Session, member_id: int) -> str:
     product_id: int = args["product_id"]
@@ -120,3 +108,10 @@ def _register_product(args: dict, db: Session, member_id: int) -> str:
         f"- 가격: {product.price:,.0f}원\n"
         f"- 재고: {product.stock}개"
     )
+
+
+# tool 이름 → handler 함수 매핑 (registry가 이 dict를 직접 사용)
+HANDLERS = {
+    "register_product": _register_product,
+    "update_product": _update_product,
+}
