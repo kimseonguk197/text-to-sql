@@ -35,7 +35,7 @@ def call_sql_pipeline(
         # 2.SQL 검증 -> 성공시 : SQL실행, 실패시 : SQL 재생성
         validation = validate_and_correct(current_sql)
         if not validation.is_valid:
-            last_error = str(validation)
+            last_error = validation.error_message
             continue
 
         # 3.SQL 실행 -> 성공시 : 응답 반환, 실패시 : SQL 재생성
