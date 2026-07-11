@@ -53,16 +53,14 @@ def _classify_category(user_message: str) -> str:
 
 # 사용자 메시지로부터 적절한 tool(api)을 선택하고 실행
 def call_tool_pipeline(user_message: str, db: Session, member_id: int) -> str:
-    # 1.카테고리 분류(주문, 상품 등)
+    # 1.함수 카테고리 분류(주문, 상품 등)
     category = _classify_category(user_message)
     if category is None:
         return "처리할 수 없는 요청입니다."
 
-    # 2.분류된 카테고리 스키마 가져오기
+    # 2.분류된 카테고리의 함수 가져오기(place_order 인지, cancel_order인지)
     tools = get_schemas_by_category(category)
     llm_with_tools = _llm.bind_tools(tools)
-
-    # 3단계: 스키마 내에서 적절한 함수 추출(place_order 인지, cancel_order인지)
     prompt = ChatPromptTemplate.from_messages([
         ("system", """당신은 사용자의 요청을 분석하여 적절한 함수를 호출하는 도우미입니다.
                     사용자의 요청에서 필요한 정보를 추출하여 함수를 호출하세요.
@@ -71,8 +69,8 @@ def call_tool_pipeline(user_message: str, db: Session, member_id: int) -> str:
     ])
     chain = prompt | llm_with_tools
     response = chain.invoke({"user_message": user_message})
-
-    # LLM이 tool을 선택하지 않은 경우 (파라미터 부족 등)
+    print(response)
+    # 3.LLM이 함수명(tool)을 선택하지 않은 경우 (파라미터 부족 등)
     if not response.tool_calls:
         logger.info("[tool_pipeline] tool 미선택 → LLM 직접 응답 반환")
         return response.content or "요청을 처리하려면 더 구체적인 정보가 필요합니다."

@@ -126,11 +126,9 @@ def _tables_from_sql(sql: str) -> list[str]:
 
 
 #  Few-shot 예시 (SQL 생성 정확도를 높이는 핵심 기법)
-#    1. 실제 사용 사례에서 자주 나오는 패턴을 선정
-#    2. :current_member_id 사용 패턴을 반드시 포함
-#    3. 날짜 함수, 집계 함수 예시 포함 (실수하기 쉬운 부분)
-#    4. 단순 조회 → 집계 → JOIN → 복합 조건 순으로 난이도 배치
-# ─────────────────────────────────────────────────────────────
+#    1. del_yn, 정렬, limit 등 기본 조회 예시
+#    2. :current_member_id 사용 패턴 예시
+#    3. join, 집계함수 등 복잡한 쿼리 예시
 FEW_SHOT_EXAMPLES = """
 [예시 1 - 단순 조건 조회]
 질문: 나이가 40살 이상인 회원 목록을 알려줘
@@ -158,34 +156,11 @@ LIMIT 100;
 [예시 3 - 집계 함수 + 날짜 필터 + 개인 데이터]
 질문: 내가 최근 1달 동안 주문한 총금액이 얼마야?
 SQL:
-SELECT SUM(p.price * o.quantity) AS total_amount
+SELECT ROUND(SUM(p.price * o.quantity)) AS total_amount
 FROM orders o
 JOIN products p ON o.product_id = p.id
 WHERE o.member_id = :current_member_id
   AND o.del_yn = 'N'
   AND p.del_yn = 'N'
   AND o.created_at >= NOW() - INTERVAL '1 month';
-
-[예시 4 - GROUP BY 집계]
-질문: 카테고리별 상품 수와 평균 가격을 알려줘
-SQL:
-SELECT category,
-       COUNT(*) AS product_count,
-       ROUND(AVG(price)::NUMERIC, 0) AS avg_price
-FROM products
-WHERE del_yn = 'N'
-GROUP BY category
-ORDER BY product_count DESC
-LIMIT 100;
-
-[예시 5 - 복합 JOIN + 필터]
-질문: 전자제품 카테고리에서 내가 구매한 총수량은?
-SQL:
-SELECT SUM(o.quantity) AS total_quantity
-FROM orders o
-JOIN products p ON o.product_id = p.id
-WHERE o.member_id = :current_member_id
-  AND o.del_yn = 'N'
-  AND p.del_yn = 'N'
-  AND p.category = '전자제품';
 """
