@@ -11,8 +11,9 @@
 
 ```bash
 python -m venv .venv
-# Windows: .venv\Scripts\activate
-source .venv/bin/activate          
+#가상환경모드
+#window : .venv/Scripts/activate #비활성화는 deactivate
+#mac : source .venv/bin/activate 
 pip install -r requirements.txt
 ```
 
