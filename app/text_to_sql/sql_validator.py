@@ -1,12 +1,9 @@
 #SQL 검증 & 보안 (SQL Validation)
 import re
-import logging
 from dataclasses import dataclass
 from typing import Optional
 
 from app.text_to_sql.schema_context import ALLOWED_TABLES, PERSONAL_TABLES
-
-logger = logging.getLogger(__name__)
 
 #  보안: 절대 허용하지 않는 SQL 키워드 블랙리스트
 # ─────────────────────────────────────────────────────────────
@@ -36,7 +33,7 @@ class ValidationResult:
 
 
 def validate_and_correct(sql: str) -> ValidationResult:
-    logger.info(f"[SQL 검증] 입력 쿼리:\n{sql}")
+    print(f"[SQL 검증] 입력 쿼리:\n{sql}")
 
     # 1. 빈 SQL 체크
     if not sql or not sql.strip():
@@ -78,7 +75,7 @@ def validate_and_correct(sql: str) -> ValidationResult:
         # 특정 문자에 끼워져 있는것이 아닌, 독립된 하나의 단어로 쓰인 위험한 키워드 검출
         pattern = r'\b' + re.escape(keyword) + r'\b'
         if re.search(pattern, sql_upper):
-            logger.warning(f"[SQL 검증] 위험 키워드 감지: {keyword}")
+            print(f"[SQL 검증] 위험 키워드 감지: {keyword}")
             return ValidationResult(
                 is_valid=False,
                 corrected_sql=None,
@@ -89,7 +86,7 @@ def validate_and_correct(sql: str) -> ValidationResult:
     mentioned_tables = _extract_table_names(sql) #쿼리에서 테이블 목록 추출 
     unknown_tables = mentioned_tables - ALLOWED_TABLES #조회 허용 테이블 목록
     if unknown_tables:
-        logger.warning(f"[SQL 검증] 허용되지 않은 테이블: {unknown_tables}")
+        print(f"[SQL 검증] 허용되지 않은 테이블: {unknown_tables}")
         return ValidationResult(
             is_valid=False,
             corrected_sql=None,
@@ -101,7 +98,7 @@ def validate_and_correct(sql: str) -> ValidationResult:
     personal_tables_in_sql = mentioned_tables & PERSONAL_TABLES
     if personal_tables_in_sql:
         if ":current_member_id" not in sql:
-            logger.warning(f"[SQL 검증] RLS 위반: {personal_tables_in_sql} 테이블에 current_member_id 필터 없음")
+            print(f"[SQL 검증] RLS 위반: {personal_tables_in_sql} 테이블에 current_member_id 필터 없음")
             return ValidationResult(
                 is_valid=False,
                 corrected_sql=None,
@@ -121,7 +118,7 @@ def validate_and_correct(sql: str) -> ValidationResult:
         sql_stripped = sql.rstrip().rstrip(";").rstrip()
         corrected_sql = f"{sql_stripped}\nLIMIT {MAX_ROWS};"
 
-    logger.debug(f"[SQL 검증] 통과: {corrected_sql[:80]}...")
+    print(f"[SQL 검증] 통과: {corrected_sql[:80]}...")
     return ValidationResult(
         is_valid=True,
         corrected_sql=corrected_sql,

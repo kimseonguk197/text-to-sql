@@ -1,13 +1,10 @@
 
-import logging
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
 
 from app import models, schemas
 from app.dependencies import get_db, get_current_member
 from app.services.chat_classification import process_chat
-
-logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/chats", tags=["chat"])
 
@@ -22,7 +19,7 @@ def create_chat(
     db: Session = Depends(get_db),
     current_member: models.Member = Depends(get_current_member),
 ):
-    logger.info(
+    print(
         f"[채팅 API] 요청 | 회원ID={current_member.id} | "
         f"메시지={body.message[:60]}..."
     )

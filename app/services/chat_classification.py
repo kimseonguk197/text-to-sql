@@ -1,6 +1,5 @@
 # 사용자 메시지의 의도를 3가지로 분류하여 각 파이프라인으로 라우팅
 import os
-import logging
 from sqlalchemy.orm import Session
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
@@ -9,8 +8,6 @@ from langchain_core.output_parsers import StrOutputParser
 from app.text_to_sql.sql_pipeline import call_sql_pipeline
 from app.text_to_sql.llm_response import format_general_response
 from app.tools.tool_pipeline import call_tool_pipeline
-
-logger = logging.getLogger(__name__)
 
 #  의도 분류 LLM. 
 _llm_classify = ChatOpenAI(
@@ -41,7 +38,7 @@ def classify_intent(user_message: str) -> str:
         return intent
 
     # 예외: 예상치 못한 출력은 안전하게 QUERY로 처리
-    logger.warning(f"[의도 분류] 예상치 못한 응답: '{result}' → QUERY로 fallback")
+    print(f"[의도 분류] 예상치 못한 응답: '{result}' → QUERY로 fallback")
     return "QUERY"
 
 
@@ -53,7 +50,7 @@ def process_chat(
 ) -> str:
     # 가장 먼저 사용자 메시지 분류작업
     intent = classify_intent(user_message)
-    logger.info(f"[파이프라인] 의도 분류 결과: {intent}")
+    print(f"[파이프라인] 의도 분류 결과: {intent}")
 
     # 1)질의를 SQL로 변환(TEXT-TO-SQL)
     if intent == "QUERY":

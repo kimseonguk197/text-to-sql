@@ -1,7 +1,6 @@
 # SQL 생성
 import os
 import re
-import logging
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
@@ -12,8 +11,6 @@ from app.text_to_sql.schema_context import (
     ALLOWED_TABLES,
     PERSONAL_TABLES,
 )
-
-logger = logging.getLogger(__name__)
 
 #  LLM 인스턴스 (SQL 생성 전용)
 #  temperature=0: 재현 가능한 결정론적 SQL 생성
@@ -74,7 +71,7 @@ def generate_sql(user_message: str) -> str:
         "user_message": user_message,
     })
 
-    logger.debug(f"[SQL 생성] 입력: {user_message[:50]}... → SQL: {raw_sql[:100]}...")
+    print(f"[SQL 생성] 입력: {user_message[:50]}... → SQL: {raw_sql[:100]}...")
     return raw_sql
 
 # 사용자 질문에서 관련 테이블을 LLM으로 선택
@@ -96,7 +93,7 @@ def _select_relevant_tables(user_message: str) -> list[str]:
         "table_descriptions": desc_text, 
         "user_message": user_message})
     selected = [t.strip().lower() for t in result.split(",") if t.strip().lower() in ALLOWED_TABLES]
-    logger.debug(f"[테이블 선택] 질문: {user_message[:40]}... → {selected}")
+    print(f"[테이블 선택] 질문: {user_message[:40]}... → {selected}")
     return selected
 
 
@@ -112,7 +109,7 @@ def fix_sql(original_sql: str, error_message: str) -> str:
         "error_message": error_message,
     })
 
-    logger.debug(f"[SQL 수정] 원본 오류: {error_message[:80]}... → 수정 SQL: {fixed_sql[:100]}...")
+    print(f"[SQL 수정] 원본 오류: {error_message[:80]}... → 수정 SQL: {fixed_sql[:100]}...")
     return fixed_sql
 
 

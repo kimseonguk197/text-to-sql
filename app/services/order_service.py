@@ -1,9 +1,6 @@
-import logging
 from sqlalchemy.orm import Session
 
 from app import models
-
-logger = logging.getLogger(__name__)
 
 def place_order(db: Session, member_id: int, product_id: int, quantity: int):
     product = db.query(models.Product).filter(models.Product.id == product_id).first()
@@ -22,7 +19,7 @@ def place_order(db: Session, member_id: int, product_id: int, quantity: int):
     db.commit()
     db.refresh(order)
 
-    logger.info(f"[place_order] 완료 | 회원={member_id}, 상품={product.name}, 수량={quantity}")
+    print(f"[place_order] 완료 | 회원={member_id}, 상품={product.name}, 수량={quantity}")
     return order, product
 
 
@@ -45,5 +42,5 @@ def cancel_order(db: Session, member_id: int, order_id: int):
     order.del_yn = 'Y'
     db.commit()
 
-    logger.info(f"[cancel_order] 완료 | 회원={member_id}, 주문={order_id}")
+    print(f"[cancel_order] 완료 | 회원={member_id}, 주문={order_id}")
     return order_id, product_name, quantity

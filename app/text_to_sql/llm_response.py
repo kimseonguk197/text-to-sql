@@ -1,13 +1,10 @@
 
 import os
 import json
-import logging
 from typing import Any
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
-
-logger = logging.getLogger(__name__)
 
 #  SQL 조회후 응답 생성용 LLM
 #  temperature=0.3: 약간의 자연스러움을 허용하되 일관성 유지
@@ -45,7 +42,7 @@ def format_sql_result(
     # 결과를 JSON 형태로 직렬화하여 프롬프트에 포함
     results_json = json.dumps(truncated, ensure_ascii=False, indent=2)
 
-    logger.info(f"[포매팅] results: {results_json}")
+    print(f"[포매팅] results: {results_json}")
 
     prompt = ChatPromptTemplate.from_messages([
         (
@@ -69,7 +66,7 @@ def format_sql_result(
         "shown_rows": shown_rows,
     })
 
-    logger.info(f"[포매팅] response: {response}")
+    print(f"[포매팅] response: {response}")
     return response
 
 
@@ -89,7 +86,7 @@ def format_general_response(user_message: str) -> str:
 
 # 모든 재시도 실패 후 사용자 친화적인 오류 메시지를 반환
 def format_error_response(user_message: str, error_detail: str) -> str:
-    logger.error(f"[포매팅] 오류 응답 생성 | 질문: {user_message[:50]} | 원인: {error_detail}")
+    print(f"[포매팅] 오류 응답 생성 | 질문: {user_message[:50]} | 원인: {error_detail}")
     return (
         "죄송합니다. 요청하신 내용을 처리하는 중 문제가 발생했습니다. "
         "질문을 더 구체적으로 다시 입력해 주세요"

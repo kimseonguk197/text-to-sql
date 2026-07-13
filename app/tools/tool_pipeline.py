@@ -1,6 +1,5 @@
 
 import os
-import logging
 from sqlalchemy.orm import Session
 from langchain_openai import ChatOpenAI
 
@@ -8,8 +7,6 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 
 from app.tools.registry import get_category_descriptions, get_schemas_by_category, execute_tool, CATEGORIES
-
-logger = logging.getLogger(__name__)
 
 # 1단계: 카테고리 분류용 LLM
 # 파라미터 추출은 창의성 불필요하므로, temperature=0. 카테고리 이름만 출력하면 되므로 max_tokens 최소화
@@ -45,9 +42,9 @@ def _classify_category(user_message: str) -> str:
     })
     category = result.strip().lower()
     if category not in CATEGORIES:
-        logger.warning(f"[tool_pipeline] 알 수 없는 카테고리: '{category}' → 전체 fallback")
+        print(f"[tool_pipeline] 알 수 없는 카테고리: '{category}' → 전체 fallback")
         return None
-    logger.info(f"[tool_pipeline] 카테고리 분류: {category}")
+    print(f"[tool_pipeline] 카테고리 분류: {category}")
     return category
 
 
@@ -72,17 +69,17 @@ def call_tool_pipeline(user_message: str, db: Session, member_id: int) -> str:
     print(response)
     # 3.LLM이 함수명(tool)을 선택하지 않은 경우 (파라미터 부족 등)
     if not response.tool_calls:
-        logger.info("[tool_pipeline] tool 미선택 → LLM 직접 응답 반환")
+        print("[tool_pipeline] tool 미선택 → LLM 직접 응답 반환")
         return response.content or "요청을 처리하려면 더 구체적인 정보가 필요합니다."
 
     tool_call = response.tool_calls[0]
     tool_name = tool_call["name"]
     args = tool_call["args"]
 
-    logger.info(f"[tool_pipeline] 실행 | tool={tool_name} | args={args}")
+    print(f"[tool_pipeline] 실행 | tool={tool_name} | args={args}")
 
     try:
         return execute_tool(tool_name, args, db, member_id)
     except Exception as e:
-        logger.error(f"[tool_pipeline] 실행 실패 | tool={tool_name} | error={e}")
+        print(f"[tool_pipeline] 실행 실패 | tool={tool_name} | error={e}")
         return f"요청 처리 중 오류가 발생했습니다: {str(e)}"

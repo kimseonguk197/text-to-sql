@@ -1,9 +1,6 @@
-import logging
 from sqlalchemy.orm import Session
 
 from app import models
-
-logger = logging.getLogger(__name__)
 
 
 def register_product(db: Session, member_id: int, name: str, category: str, price: float, stock: int):
@@ -12,7 +9,7 @@ def register_product(db: Session, member_id: int, name: str, category: str, pric
     db.commit()
     db.refresh(product)
 
-    logger.info(f"[register_product] 완료 | 회원={member_id}, 상품={product.name}")
+    print(f"[register_product] 완료 | 회원={member_id}, 상품={product.name}")
     return product
 
 
@@ -29,5 +26,5 @@ def update_product(db: Session, member_id: int, product_id: int, **fields):
     db.commit()
     db.refresh(product)
 
-    logger.info(f"[update_product] 완료 | 회원={member_id}, 상품={product_id}")
+    print(f"[update_product] 완료 | 회원={member_id}, 상품={product_id}")
     return product

@@ -1,11 +1,8 @@
 
-import logging
 from sqlalchemy.orm import Session
 
 from app import models
 from app.services import order_service
-
-logger = logging.getLogger(__name__)
 
 #  Tool 스키마 (OpenAI function calling 형식)
 TOOL_SCHEMAS = [

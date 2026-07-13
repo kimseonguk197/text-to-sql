@@ -1,11 +1,8 @@
 # SQL실행 및 예외처리
-import logging
 from typing import Any
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from sqlalchemy.exc import ( OperationalError, ProgrammingError,  DataError, StatementError, )
-
-logger = logging.getLogger(__name__)
 
 
 def execute_sql(
@@ -13,7 +10,7 @@ def execute_sql(
     sql: str,
     params: dict[str, Any],
 ) -> list[dict[str, Any]]:
-    logger.info(f"[SQL 실행] 쿼리: {sql}")
+    print(f"[SQL 실행] 쿼리: {sql}")
 
     try:
         result = db.execute(text(sql), params)
@@ -30,27 +27,27 @@ def execute_sql(
 
     except ProgrammingError as e:
         error_msg = f"SQL 문법 또는 스키마 오류: {str(e.orig or e)}"
-        logger.warning(f"[SQL 실행] ProgrammingError: {error_msg}")
+        print(f"[SQL 실행] ProgrammingError: {error_msg}")
         raise Exception(error_msg) from e
 
     except DataError as e:
         error_msg = f"데이터 타입 오류: {str(e.orig or e)}"
-        logger.warning(f"[SQL 실행] DataError: {error_msg}")
+        print(f"[SQL 실행] DataError: {error_msg}")
         raise Exception(error_msg) from e
 
     except OperationalError as e:
         error_msg = f"데이터베이스 운영 오류: {str(e.orig or e)}"
-        logger.error(f"[SQL 실행] OperationalError: {error_msg}")
+        print(f"[SQL 실행] OperationalError: {error_msg}")
         raise Exception(error_msg) from e
 
     except StatementError as e:
         error_msg = f"파라미터 바인딩 오류: {str(e)}"
-        logger.error(f"[SQL 실행] StatementError: {error_msg}")
+        print(f"[SQL 실행] StatementError: {error_msg}")
         raise Exception(error_msg) from e
 
     except Exception as e:
         error_msg = f"예상치 못한 오류: {str(e)}"
-        logger.error(f"[SQL 실행] 알 수 없는 오류: {error_msg}")
+        print(f"[SQL 실행] 알 수 없는 오류: {error_msg}")
         raise Exception(error_msg) from e
 
 # DB 결과값과 타입을 JSON 직렬화 가능한 형태로 변환
