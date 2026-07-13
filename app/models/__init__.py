@@ -59,5 +59,6 @@ class Chat(Base):
     response = Column(String, nullable=False)
     del_yn = Column(String(1), nullable=False, default='N')
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    
     member = relationship("Member", back_populates="chats")
 
