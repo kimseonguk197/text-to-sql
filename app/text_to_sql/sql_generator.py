@@ -72,7 +72,6 @@ def generate_sql(user_message: str) -> str:
         "user_message": user_message,
     })
 
-    print(f"[SQL 생성] 입력: {user_message[:50]}... → SQL: {raw_sql[:100]}...")
     return raw_sql
 
 # 사용자 질문에서 관련 테이블을 LLM으로 선택

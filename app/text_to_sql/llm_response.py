@@ -42,8 +42,6 @@ def format_sql_result(
     # 결과를 JSON 형태로 직렬화하여 프롬프트에 포함
     results_json = json.dumps(truncated, ensure_ascii=False, indent=2)
 
-    print(f"[포매팅] results: {results_json}")
-
     prompt = ChatPromptTemplate.from_messages([
         (
             "system",
@@ -66,7 +64,7 @@ def format_sql_result(
         "shown_rows": shown_rows,
     })
 
-    print(f"[포매팅] response: {response}")
+    print(f"response: {response}")
     return response
 
 

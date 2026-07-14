@@ -9,6 +9,28 @@ from app.text_to_sql.sql_pipeline import call_sql_pipeline
 from app.text_to_sql.llm_response import format_general_response
 from app.tools.tool_pipeline import call_tool_pipeline
 
+
+# 사용자 메시지를 받아 의도에 맞는 파이프라인을 실행
+def process_chat(
+    user_message: str,
+    db: Session,
+    current_member_id: int,
+) -> str:
+    # 가장 먼저 사용자 메시지 분류작업
+    intent = classify_intent(user_message)
+    print(f"[파이프라인] 의도 분류 결과: {intent}")
+
+    # 1)질의를 SQL로 변환(TEXT-TO-SQL)
+    if intent == "QUERY":
+        return call_sql_pipeline(user_message, db, current_member_id)
+    # 2)기존API활용 작업(insert, update 등)
+    elif intent == "ACTION":
+        return call_tool_pipeline(user_message, db, current_member_id)
+    # 3)DB 작업 없는 일반 LLM응답
+    else:
+        return format_general_response(user_message)
+
+
 #  의도 분류 LLM. 
 _llm_classify = ChatOpenAI(
     model="gpt-4.1-mini",
@@ -40,24 +62,3 @@ def classify_intent(user_message: str) -> str:
     # 예외: 예상치 못한 출력은 안전하게 QUERY로 처리
     print(f"[의도 분류] 예상치 못한 응답: '{result}' → QUERY로 fallback")
     return "QUERY"
-
-
-# 사용자 메시지를 받아 의도에 맞는 파이프라인을 실행
-def process_chat(
-    user_message: str,
-    db: Session,
-    current_member_id: int,
-) -> str:
-    # 가장 먼저 사용자 메시지 분류작업
-    intent = classify_intent(user_message)
-    print(f"[파이프라인] 의도 분류 결과: {intent}")
-
-    # 1)질의를 SQL로 변환(TEXT-TO-SQL)
-    if intent == "QUERY":
-        return call_sql_pipeline(user_message, db, current_member_id)
-    # 2)기존API활용 작업(insert, update 등)
-    elif intent == "ACTION":
-        return call_tool_pipeline(user_message, db, current_member_id)
-    # 3)DB 작업 없는 일반 LLM응답
-    else:
-        return format_general_response(user_message)
