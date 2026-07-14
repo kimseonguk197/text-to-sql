@@ -6,6 +6,7 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 
 from app.text_to_sql.schema_context import (
+    get_schema_context,
     get_schema_context_by_tables,
     TABLE_DESCRIPTIONS,
     ALLOWED_TABLES,
@@ -61,9 +62,9 @@ SQL_FIX_PROMPT = ChatPromptTemplate.from_messages([
 
 # 자연어 질문을 PostgreSQL SELECT 문으로 변환
 def generate_sql(user_message: str) -> str:
-    # schema = get_schema_context()
-    relevant_tables = _select_relevant_tables(user_message)
-    schema = get_schema_context_by_tables(relevant_tables)
+    schema = get_schema_context()
+    # relevant_tables = _select_relevant_tables(user_message)
+    # schema = get_schema_context_by_tables(relevant_tables)
     chain = SQL_GENERATION_PROMPT | llm_sql | StrOutputParser()
     raw_sql = chain.invoke({
         "schema": schema,
