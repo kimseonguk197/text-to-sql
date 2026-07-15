@@ -27,7 +27,6 @@ MAX_ROWS = 100
 @dataclass
 class ValidationResult:
     is_valid: bool # 유효성 판단
-    is_unauthorized: bool = False  # 유효성 중에 타인 데이터 접근 시도 여부
     corrected_sql: Optional[str] = None   # 검증 통과 후 수정된 SQL
     error_message: Optional[str] = None   # 검증 실패 시 사유
 
@@ -104,7 +103,6 @@ def validate_and_correct(sql: str) -> ValidationResult:
                 error_message=(
                     f"개인 데이터 테이블({', '.join(personal_tables_in_sql)})을 조회할 때는 ':current_member_id' 필터가 필요합니다."
                 ),
-                is_unauthorized=True,
             )
         
     # 6. LIMIT 자동 주입
