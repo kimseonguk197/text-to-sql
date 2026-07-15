@@ -124,8 +124,7 @@ def _tables_from_sql(sql: str) -> list[str]:
 
 #  Few-shot 예시 (SQL 생성 정확도를 높이는 핵심 기법)
 #    1. del_yn, 정렬, limit 등 기본 조회 예시
-#    2. :current_member_id 사용 패턴 예시
-#    3. join, 집계함수 등 복잡한 쿼리 예시
+#    2. join, 집계함수 등 복잡한 쿼리 예시
 FEW_SHOT_EXAMPLES = """
 [예시 1 - 단순 조건 조회]
 질문: 나이가 40살 이상인 회원 목록을 알려줘
