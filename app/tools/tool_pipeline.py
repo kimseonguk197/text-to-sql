@@ -50,7 +50,7 @@ def _classify_category(user_message: str) -> str:
 
 # 사용자 메시지로부터 적절한 tool(api)을 선택하고 실행
 def call_tool_pipeline(user_message: str, db: Session, member_id: int) -> str:
-    # 1.함수 카테고리 분류(주문, 상품 등)
+    # 1.함수 카테고리 분류(order, product 등)
     category = _classify_category(user_message)
     if category is None:
         return "처리할 수 없는 요청입니다."
