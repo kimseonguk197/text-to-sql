@@ -31,7 +31,6 @@ class ValidationResult:
     corrected_sql: Optional[str] = None   # 검증 통과 후 수정된 SQL
     error_message: Optional[str] = None   # 검증 실패 시 사유
 
-
 def validate_and_correct(sql: str) -> ValidationResult:
     print(f"[SQL 검증] 입력 쿼리:\n{sql}")
 
