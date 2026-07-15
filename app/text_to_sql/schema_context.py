@@ -10,7 +10,7 @@
 ALLOWED_TABLES = frozenset({"members", "products", "orders", "chats"})
 
 #  RLS 대상 테이블 : jwt토큰의 member_id 필터가 자동 적용
-PERSONAL_TABLES = frozenset({"orders", "chats"})
+PERSONAL_TABLES = frozenset({"orders", "chats", "members"})
 
 #  테이블 자연어 설명
 TABLE_DESCRIPTIONS: dict[str, str] = {
